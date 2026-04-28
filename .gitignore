@@ -1,2 +1,4 @@
 .env
 .mypy_cache/
+prompt.txt
+__pycache__/
