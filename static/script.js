@@ -2,8 +2,15 @@ const chat = document.getElementById('chat');
 const input = document.getElementById('input');
 const sendBtn = document.getElementById('send-btn');
 
-// Historique de la conversation
-let history = [];
+// Charge l'historique depuis localStorage ou démarre vide
+let history = JSON.parse(localStorage.getItem('chat_history')) || [];
+
+// Réaffiche les messages au chargement
+history.forEach(msg => {
+  if (msg.role !== 'system') {
+    addMessage(msg.role === 'user' ? 'user' : 'bot', msg.content);
+  }
+});
 
 // Auto-resize du textarea
 input.addEventListener('input', () => {
@@ -11,7 +18,7 @@ input.addEventListener('input', () => {
   input.style.height = input.scrollHeight + 'px';
 });
 
-// Envoyer avec Entrée (Shift+Entrée pour saut de ligne)
+// Envoyer avec Entrée
 input.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
@@ -65,34 +72,31 @@ async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
 
-  // Affiche le message utilisateur
   addMessage('user', text);
   input.value = '';
   input.style.height = 'auto';
   sendBtn.disabled = true;
 
-  // Ajoute à l'historique
   history.push({ role: 'user', content: text });
+  localStorage.setItem('chat_history', JSON.stringify(history));
 
-  // Indicateur de frappe
   const typingDiv = addTyping();
 
   try {
     const res = await fetch('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: history })
+      body: JSON.stringify({ messages: history.slice(-10) })
     });
 
     const data = await res.json();
     const reply = data.response;
 
-    // Retire l'indicateur et affiche la réponse
     typingDiv.remove();
     addMessage('bot', reply);
 
-    // Ajoute la réponse à l'historique
     history.push({ role: 'assistant', content: reply });
+    localStorage.setItem('chat_history', JSON.stringify(history));
 
   } catch (err) {
     typingDiv.remove();
